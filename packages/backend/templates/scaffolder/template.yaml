@@ -1,0 +1,128 @@
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: ec2-instance
+  title: ec2-instance
+  description: An EC2 instance template for the scaffolder that creates a simple EC2 instance
+spec:
+  owner: system:devops
+  type: service
+
+  parameters:
+    - title: Tagging Information
+      required:
+        - name
+      properties:
+        name:
+          title: Name
+          type: string
+          description: Unique name to refer to the instance
+          ui:autofocus: true
+          ui:options:
+            rows: 5
+        ami:
+          title: OS
+          type: string
+          description: Operating System to use
+          enum:
+            - ami-0c7217cdde317cfec
+            - ami-079db87dc4c10ac91
+          enumNames:
+            - Ubuntu
+            - Amazon Linux
+          ui:options:
+            rows: 5
+    - title: Firewall Configuration
+      required:
+        - ports
+      properties:
+        ports:
+          title: Port
+          type: array
+          description: Port and Protocol to open on the firewall
+          items:
+            type: object
+            required:
+              - port
+              - protocol
+            properties:
+              port:
+                title: Port
+                type: number
+                description: Port to open on the firewall
+              protocol:
+                title: Protocol
+                type: string
+                description: Protocol to open on the firewall
+                default: tcp
+                enum:
+                  - tcp
+                  - udp
+    - title: Public SSH Key to save
+      required:
+        - sshKey
+      properties:
+        sshKey:
+          title: SSH Key
+          type: string
+          description: Public SSH Key to save (Must be Base64 encoded)
+          ui:widget: textarea
+          ui:options:
+            rows: 5
+
+    # - title: Choose a location
+    #   required:
+    #     - repoUrl
+    #   properties:
+    #     repoUrl:
+    #       title: Repository Location
+    #       type: string
+    #       ui:field: RepoUrlPicker
+    #       ui:options:
+    #         allowedHosts:
+    #           - github.com
+
+  # These steps are executed in the scaffolder backend, using data that we gathered
+  # via the parameters above.
+  steps:
+    - id: launch-ec2-instance
+      name: Launch EC2 Instance
+      action: ec2:launch
+      input:
+        name: ${{ parameters.name }}
+        ami: ${{ parameters.ami }}
+        ports: ${{ parameters.ports }}
+        sshKey: ${{ parameters.sshKey }}
+
+    # Each step executes an action, in this case one templates files into the working directory.
+    # - id: fetch-base
+    #   name: Fetch Base
+    #   action: fetch:template
+    #   input:
+    #     url: ./content
+    #     values:
+    #       name: ${{ parameters.name }}
+
+    # # This step publishes the contents of the working directory to GitHub.
+    # - id: publish
+    #   name: Publish
+    #   action: publish:github
+    #   input:
+    #     allowedHosts: ['github.com']
+    #     description: This is ${{ parameters.name }}
+    #     repoUrl: ${{ parameters.repoUrl }}
+
+    # # The final step is to register our new component in the catalog.
+    # - id: register
+    #   name: Register
+    #   action: catalog:register
+    #   input:
+    #     repoContentsUrl: ${{ steps['publish'].output.repoContentsUrl }}
+    #     catalogInfoPath: '/catalog-info.yaml'
+
+  # Outputs are displayed to the user after a successful execution of the template.
+  output:
+    text:
+      - title: EC2 Instance Name
+        content: |
+          **Entity URL:** `${{ steps['launch-ec2-instance'].output.ram }}`
